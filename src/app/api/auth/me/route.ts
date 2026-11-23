@@ -1,7 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextResponse, connection } from "next/server";
 import { getAuthContext } from "@/lib/auth";
 
 export async function GET() {
+  await connection();
   try {
     const auth = await getAuthContext();
     if (!auth) {
@@ -16,6 +17,7 @@ export async function GET() {
       isAccountant: auth.isAccountant,
     });
   } catch (error: any) {
+    console.error("Auth me error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

@@ -18,23 +18,26 @@ export async function GET(req: NextRequest) {
     const month = searchParams.get("month");
 
     const now = new Date();
-    let startDate = `${now.getFullYear()}-01-01`;
-    let endDate = `${now.getFullYear()}-12-31`;
+    const curYear = year && year !== "All" ? parseInt(year, 10) : now.getFullYear();
+    let startDate = `${curYear}-01-01`;
+    let endDate = `${curYear}-12-31`;
 
     if (period === "month") {
-      const curYear = year && year !== "All" ? year : String(now.getFullYear());
-      const curMonth = month && month !== "All" ? month.padStart(2, "0") : String(now.getMonth() + 1).padStart(2, "0");
-      startDate = `${curYear}-${curMonth}-01`;
-      endDate = `${curYear}-${curMonth}-31`;
+      const curMonth = month && month !== "All" ? parseInt(month, 10) : now.getMonth() + 1;
+      const mStr = String(curMonth).padStart(2, "0");
+      const lastDay = new Date(curYear, curMonth, 0).getDate();
+      startDate = `${curYear}-${mStr}-01`;
+      endDate = `${curYear}-${mStr}-${String(lastDay).padStart(2, "0")}`;
     } else if (period === "quarter") {
       const curQuarter = Math.floor(now.getMonth() / 3);
-      const startM = String(curQuarter * 3 + 1).padStart(2, "0");
-      const endM = String(curQuarter * 3 + 3).padStart(2, "0");
-      startDate = `${now.getFullYear()}-${startM}-01`;
-      endDate = `${now.getFullYear()}-${endM}-31`;
+      const startM = curQuarter * 3 + 1;
+      const endM = curQuarter * 3 + 3;
+      const lastDay = new Date(curYear, endM, 0).getDate();
+      startDate = `${curYear}-${String(startM).padStart(2, "0")}-01`;
+      endDate = `${curYear}-${String(endM).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
     } else if (period === "ytd") {
-      startDate = `${now.getFullYear()}-01-01`;
-      endDate = `${now.getFullYear()}-12-31`;
+      startDate = `${curYear}-01-01`;
+      endDate = `${curYear}-12-31`;
     }
 
     const conditions = [
