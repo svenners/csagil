@@ -66,10 +66,10 @@ export function SettingsView({ isAccountant = false }: SettingsViewProps) {
             <select
               value={locale}
               onChange={(e) => setLocale(e.target.value as any)}
-              className="w-full px-3 py-2 rounded-xl border border-[#bfcbbd] bg-white font-medium"
+              className="w-full px-3 py-2 rounded-xl border border-[#9cb19e] bg-white text-[#11140e] font-semibold"
             >
-              <option value="pt-BR">Português (Brasil)</option>
-              <option value="en">English (US)</option>
+              <option value="pt-BR" className="text-[#11140e] bg-white">Português (Brasil)</option>
+              <option value="en" className="text-[#11140e] bg-white">English (US)</option>
             </select>
           </div>
 
@@ -78,12 +78,12 @@ export function SettingsView({ isAccountant = false }: SettingsViewProps) {
             <select
               value={currency}
               onChange={(e) => setCurrency(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl border border-[#bfcbbd] bg-white font-medium"
+              className="w-full px-3 py-2 rounded-xl border border-[#9cb19e] bg-white text-[#11140e] font-semibold"
             >
-              <option value="BRL">R$ BRL - Brazilian Real</option>
-              <option value="USD">$ USD - United States Dollar</option>
-              <option value="EUR">€ EUR - Euro</option>
-              <option value="GBP">£ GBP - British Pound</option>
+              <option value="BRL" className="text-[#11140e] bg-white">R$ BRL - Brazilian Real</option>
+              <option value="USD" className="text-[#11140e] bg-white">$ USD - United States Dollar</option>
+              <option value="EUR" className="text-[#11140e] bg-white">€ EUR - Euro</option>
+              <option value="GBP" className="text-[#11140e] bg-white">£ GBP - British Pound</option>
             </select>
           </div>
         </div>

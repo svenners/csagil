@@ -17,10 +17,13 @@ export async function GET(req: NextRequest) {
     const year = searchParams.get("year");
     const month = searchParams.get("month");
 
+    const customStart = searchParams.get("startDate");
+    const customEnd = searchParams.get("endDate");
+
     const now = new Date();
     const curYear = year && year !== "All" ? parseInt(year, 10) : now.getFullYear();
-    let startDate = `${curYear}-01-01`;
-    let endDate = `${curYear}-12-31`;
+    let startDate: string | null = `${curYear}-01-01`;
+    let endDate: string | null = `${curYear}-12-31`;
 
     if (period === "month") {
       const curMonth = month && month !== "All" ? parseInt(month, 10) : now.getMonth() + 1;
@@ -35,16 +38,20 @@ export async function GET(req: NextRequest) {
       const lastDay = new Date(curYear, endM, 0).getDate();
       startDate = `${curYear}-${String(startM).padStart(2, "0")}-01`;
       endDate = `${curYear}-${String(endM).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
-    } else if (period === "ytd") {
+    } else if (period === "year" || period === "ytd") {
       startDate = `${curYear}-01-01`;
       endDate = `${curYear}-12-31`;
+    } else if (period === "custom" && customStart && customEnd) {
+      startDate = customStart;
+      endDate = customEnd;
+    } else if (period === "all") {
+      startDate = null;
+      endDate = null;
     }
 
-    const conditions = [
-      eq(transactions.organizationId, auth.organizationId),
-      gte(transactions.txDate, startDate),
-      lte(transactions.txDate, endDate),
-    ];
+    const conditions = [eq(transactions.organizationId, auth.organizationId)];
+    if (startDate) conditions.push(gte(transactions.txDate, startDate));
+    if (endDate) conditions.push(lte(transactions.txDate, endDate));
 
     const whereClause = and(...conditions);
 
@@ -63,6 +70,17 @@ export async function GET(req: NextRequest) {
     const netBalance = income - expenses;
 
     // 2. Monthly Inflow vs Outflow Cash Flow Data
+    const cashFlowConditions = [eq(transactions.organizationId, auth.organizationId)];
+    if (period === "all") {
+      // all time records
+    } else if (period === "custom" && customStart && customEnd) {
+      cashFlowConditions.push(gte(transactions.txDate, customStart));
+      cashFlowConditions.push(lte(transactions.txDate, customEnd));
+    } else {
+      cashFlowConditions.push(gte(transactions.txDate, `${curYear}-01-01`));
+      cashFlowConditions.push(lte(transactions.txDate, `${curYear}-12-31`));
+    }
+
     const monthlyCashFlow = await db
       .select({
         month: sql<string>`to_char(${transactions.txDate}::date, 'YYYY-MM')`,
@@ -70,7 +88,7 @@ export async function GET(req: NextRequest) {
         outflowCents: sql<number>`coalesce(sum(case when ${transactions.amountCents} < 0 then abs(${transactions.amountCents}) else 0 end), 0)::bigint`,
       })
       .from(transactions)
-      .where(and(eq(transactions.organizationId, auth.organizationId), gte(transactions.txDate, `${now.getFullYear()}-01-01`)))
+      .where(and(...cashFlowConditions))
       .groupBy(sql`to_char(${transactions.txDate}::date, 'YYYY-MM')`)
       .orderBy(sql`to_char(${transactions.txDate}::date, 'YYYY-MM')`);
 
@@ -90,12 +108,12 @@ export async function GET(req: NextRequest) {
       .orderBy(desc(sql`sum(abs(${transactions.amountCents}))`));
 
     // 4. Brazilian Tax Withholdings Summary (from Invoices in this period)
+    const invConditions = [eq(invoices.organizationId, auth.organizationId)];
+    if (startDate) invConditions.push(gte(invoices.issueDate, startDate));
+    if (endDate) invConditions.push(lte(invoices.issueDate, endDate));
+
     const invList = await db.query.invoices.findMany({
-      where: and(
-        eq(invoices.organizationId, auth.organizationId),
-        gte(invoices.issueDate, startDate),
-        lte(invoices.issueDate, endDate)
-      ),
+      where: and(...invConditions),
     });
 
     let totalBilledCents = 0;

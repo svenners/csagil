@@ -51,7 +51,11 @@ export function TransactionsView({
   const [categoriesList, setCategoriesList] = useState<any[]>([]);
 
   // Form state for new transaction
-  const [newTxDate, setNewTxDate] = useState(new Date().toISOString().split("T")[0]);
+  const [newTxDate, setNewTxDate] = useState("2026-01-01");
+
+  useEffect(() => {
+    setNewTxDate(new Date().toISOString().split("T")[0]);
+  }, []);
   const [newMerchant, setNewMerchant] = useState("");
   const [newDesc, setNewDesc] = useState("");
   const [newAmount, setNewAmount] = useState("");
@@ -261,12 +265,12 @@ export function TransactionsView({
                 setCategoryFilter(e.target.value);
                 setPage(1);
               }}
-              className="w-full px-2.5 py-1.5 rounded-xl border border-[#bfcbbd] bg-white font-medium truncate"
+              className="w-full px-2.5 py-1.5 rounded-xl border border-[#9cb19e] bg-white text-[#11140e] font-semibold truncate shadow-2xs focus:border-[#2f5c40] focus:outline-none"
             >
-              <option value="All">{t.common.all} {t.common.category}</option>
-              <option value="uncategorized">Sem Categoria (Unassigned)</option>
+              <option value="All" className="text-[#11140e] bg-white">{t.common.all} {t.common.category}</option>
+              <option value="uncategorized" className="text-[#11140e] bg-white">Sem Categoria (Unassigned)</option>
               {categoriesList.map((c) => (
-                <option key={c.id} value={c.id}>
+                <option key={c.id} value={c.id} className="text-[#11140e] bg-white">
                   {c.name}
                 </option>
               ))}
@@ -281,11 +285,11 @@ export function TransactionsView({
                 setTypeFilter(e.target.value);
                 setPage(1);
               }}
-              className="w-full px-2.5 py-1.5 rounded-xl border border-[#bfcbbd] bg-white font-medium"
+              className="w-full px-2.5 py-1.5 rounded-xl border border-[#9cb19e] bg-white text-[#11140e] font-semibold shadow-2xs focus:border-[#2f5c40] focus:outline-none"
             >
-              <option value="All">All Types</option>
-              <option value="credit">{t.ledger.creditsOnly}</option>
-              <option value="debit">{t.ledger.debitsOnly}</option>
+              <option value="All" className="text-[#11140e] bg-white">All Types</option>
+              <option value="credit" className="text-[#11140e] bg-white">{t.ledger.creditsOnly}</option>
+              <option value="debit" className="text-[#11140e] bg-white">{t.ledger.debitsOnly}</option>
             </select>
           </div>
 
@@ -297,12 +301,12 @@ export function TransactionsView({
                 setStatusFilter(e.target.value);
                 setPage(1);
               }}
-              className="w-full px-2.5 py-1.5 rounded-xl border border-[#bfcbbd] bg-white font-medium"
+              className="w-full px-2.5 py-1.5 rounded-xl border border-[#9cb19e] bg-white text-[#11140e] font-semibold shadow-2xs focus:border-[#2f5c40] focus:outline-none"
             >
-              <option value="All">All Statuses</option>
-              <option value="Cleared">{t.ledger.cleared}</option>
-              <option value="Pending">{t.ledger.pending}</option>
-              <option value="Flagged">{t.ledger.flagged}</option>
+              <option value="All" className="text-[#11140e] bg-white">All Statuses</option>
+              <option value="Cleared" className="text-[#11140e] bg-white">{t.ledger.cleared}</option>
+              <option value="Pending" className="text-[#11140e] bg-white">{t.ledger.pending}</option>
+              <option value="Flagged" className="text-[#11140e] bg-white">{t.ledger.flagged}</option>
             </select>
           </div>
 
@@ -314,12 +318,12 @@ export function TransactionsView({
                 setSelectedYear(e.target.value);
                 setPage(1);
               }}
-              className="w-full px-2.5 py-1.5 rounded-xl border border-[#bfcbbd] bg-white font-medium"
+              className="w-full px-2.5 py-1.5 rounded-xl border border-[#9cb19e] bg-white text-[#11140e] font-semibold shadow-2xs focus:border-[#2f5c40] focus:outline-none"
             >
-              <option value="All">All Years</option>
-              <option value="2026">2026</option>
-              <option value="2025">2025</option>
-              <option value="2024">2024</option>
+              <option value="All" className="text-[#11140e] bg-white">All Years</option>
+              <option value="2026" className="text-[#11140e] bg-white">2026</option>
+              <option value="2025" className="text-[#11140e] bg-white">2025</option>
+              <option value="2024" className="text-[#11140e] bg-white">2024</option>
             </select>
           </div>
 
@@ -331,11 +335,11 @@ export function TransactionsView({
                 setSelectedMonth(e.target.value);
                 setPage(1);
               }}
-              className="w-full px-2.5 py-1.5 rounded-xl border border-[#bfcbbd] bg-white font-medium"
+              className="w-full px-2.5 py-1.5 rounded-xl border border-[#9cb19e] bg-white text-[#11140e] font-semibold shadow-2xs focus:border-[#2f5c40] focus:outline-none"
             >
-              <option value="All">All Months</option>
+              <option value="All" className="text-[#11140e] bg-white">All Months</option>
               {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, "0")).map((m) => (
-                <option key={m} value={m}>
+                <option key={m} value={m} className="text-[#11140e] bg-white">
                   {m}
                 </option>
               ))}
@@ -592,10 +596,10 @@ export function TransactionsView({
                   <select
                     value={newType}
                     onChange={(e) => setNewType(e.target.value as any)}
-                    className="w-full px-3 py-2 rounded-xl border border-[#bfcbbd]"
+                    className="w-full px-3 py-2 rounded-xl border border-[#9cb19e] bg-white text-[#11140e] font-semibold"
                   >
-                    <option value="debit">Expense / Débito</option>
-                    <option value="credit">Revenue / Crédito</option>
+                    <option value="debit" className="text-[#11140e] bg-white">Expense / Débito</option>
+                    <option value="credit" className="text-[#11140e] bg-white">Revenue / Crédito</option>
                   </select>
                 </div>
               </div>
@@ -605,11 +609,11 @@ export function TransactionsView({
                 <select
                   value={newCategoryId}
                   onChange={(e) => setNewCategoryId(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-[#bfcbbd]"
+                  className="w-full px-3 py-2 rounded-xl border border-[#9cb19e] bg-white text-[#11140e] font-semibold"
                 >
-                  <option value="">Unassigned</option>
+                  <option value="" className="text-[#11140e] bg-white">Unassigned</option>
                   {categoriesList.map((c) => (
-                    <option key={c.id} value={c.id}>
+                    <option key={c.id} value={c.id} className="text-[#11140e] bg-white">
                       {c.name}
                     </option>
                   ))}

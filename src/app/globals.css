@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fdfdf9;
+  --foreground: #1a1d17;
 }
 
 @theme inline {
@@ -12,15 +12,37 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Ensure all form controls and dropdown options remain clearly visible across OS themes */
+select {
+  color: #11140e !important;
+  background-color: #ffffff !important;
+  border-color: #9cb19e;
+  font-weight: 500;
+}
+
+select:focus {
+  border-color: #2f5c40 !important;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(47, 92, 64, 0.2);
+}
+
+option, optgroup {
+  color: #11140e !important;
+  background-color: #ffffff !important;
+  font-weight: 500;
+  padding: 8px 12px;
+}
+
+input, textarea {
+  color: #11140e !important;
+}
+
+input::placeholder, textarea::placeholder {
+  color: #78897d !important;
 }
