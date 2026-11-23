@@ -2,7 +2,7 @@ import { NextRequest, NextResponse, connection } from "next/server";
 import { getAuthContext, assertCanMutate } from "@/lib/auth";
 import { db } from "@/db";
 import { transactions, categories, categoryRules, periodLocks, auditLogs } from "@/db/schema";
-import { eq, and, desc, gte, lte, ilike, or, sql } from "drizzle-orm";
+import { eq, and, desc, gte, lte, ilike, or, sql, isNull } from "drizzle-orm";
 import { findMatchingCategoryRule } from "@/lib/categoryRulesEngine";
 
 export async function GET(req: NextRequest) {
@@ -30,20 +30,26 @@ export async function GET(req: NextRequest) {
     const conditions = [eq(transactions.organizationId, auth.organizationId)];
 
     if (year && year !== "All") {
+      const y = parseInt(year, 10);
       if (month && month !== "All") {
-        const m = month.padStart(2, "0");
-        const nextMonth = String(parseInt(m, 10) + 1).padStart(2, "0");
-        conditions.push(gte(transactions.txDate, `${year}-${m}-01`));
-        conditions.push(lte(transactions.txDate, `${year}-${m}-31`));
+        const m = parseInt(month, 10);
+        const mStr = String(m).padStart(2, "0");
+        const lastDay = new Date(y, m, 0).getDate();
+        conditions.push(gte(transactions.txDate, `${y}-${mStr}-01`));
+        conditions.push(lte(transactions.txDate, `${y}-${mStr}-${String(lastDay).padStart(2, "0")}`));
       } else {
-        conditions.push(gte(transactions.txDate, `${year}-01-01`));
-        conditions.push(lte(transactions.txDate, `${year}-12-31`));
+        conditions.push(gte(transactions.txDate, `${y}-01-01`));
+        conditions.push(lte(transactions.txDate, `${y}-12-31`));
       }
     }
 
     if (startDate) conditions.push(gte(transactions.txDate, startDate));
     if (endDate) conditions.push(lte(transactions.txDate, endDate));
-    if (categoryId && categoryId !== "All") conditions.push(eq(transactions.categoryId, categoryId));
+    if (categoryId === "uncategorized") {
+      conditions.push(isNull(transactions.categoryId));
+    } else if (categoryId && categoryId !== "All") {
+      conditions.push(eq(transactions.categoryId, categoryId));
+    }
     if (type && type !== "All") conditions.push(eq(transactions.type, type as "credit" | "debit"));
     if (status && status !== "All") conditions.push(eq(transactions.status, status as any));
 

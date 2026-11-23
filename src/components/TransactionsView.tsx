@@ -42,6 +42,7 @@ export function TransactionsView({
   const [selectedMonth, setSelectedMonth] = useState("All");
   const [typeFilter, setTypeFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [categoryFilter, setCategoryFilter] = useState("All");
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   const [jumpPage, setJumpPage] = useState("");
 
@@ -67,6 +68,7 @@ export function TransactionsView({
         month: selectedMonth,
         type: typeFilter,
         status: statusFilter,
+        categoryId: categoryFilter,
         q: searchQuery,
       });
 
@@ -98,7 +100,7 @@ export function TransactionsView({
 
   useEffect(() => {
     fetchTransactions();
-  }, [page, selectedYear, selectedMonth, typeFilter, statusFilter, searchQuery]);
+  }, [page, selectedYear, selectedMonth, typeFilter, statusFilter, categoryFilter, searchQuery]);
 
   useEffect(() => {
     fetchCategories();
@@ -210,10 +212,13 @@ export function TransactionsView({
             onClick={() => {
               setSelectedYear("All");
               setSelectedMonth("All");
+              setCategoryFilter("All");
+              setTypeFilter("All");
+              setStatusFilter("All");
               setPage(1);
             }}
             className={`px-3 py-1.5 rounded-xl border transition-colors ${
-              selectedYear === "All" && selectedMonth === "All"
+              selectedYear === "All" && selectedMonth === "All" && categoryFilter === "All"
                 ? "bg-[#2f5c40] text-white border-[#2f5c40]"
                 : "bg-[#f6f8df] border-[#bfcbbd] text-[#495a4f] hover:text-[#1a1d17]"
             }`}
@@ -245,7 +250,29 @@ export function TransactionsView({
         </div>
 
         {/* Detailed Dropdown Filters */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-xs">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 pt-1 text-xs">
+          <div>
+            <label className="block text-[10px] font-bold text-[#78897d] uppercase mb-1">
+              {t.common.category}
+            </label>
+            <select
+              value={categoryFilter}
+              onChange={(e) => {
+                setCategoryFilter(e.target.value);
+                setPage(1);
+              }}
+              className="w-full px-2.5 py-1.5 rounded-xl border border-[#bfcbbd] bg-white font-medium truncate"
+            >
+              <option value="All">{t.common.all} {t.common.category}</option>
+              <option value="uncategorized">Sem Categoria (Unassigned)</option>
+              {categoriesList.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div>
             <label className="block text-[10px] font-bold text-[#78897d] uppercase mb-1">Type</label>
             <select
