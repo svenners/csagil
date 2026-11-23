@@ -25,6 +25,7 @@ interface SidebarProps {
   activeTab: NavTab;
   setActiveTab: (tab: NavTab) => void;
   isAccountant?: boolean;
+  userEmail?: string;
   isOpenMobile: boolean;
   setIsOpenMobile: (open: boolean) => void;
 }
@@ -33,6 +34,7 @@ export function Sidebar({
   activeTab,
   setActiveTab,
   isAccountant = false,
+  userEmail,
   isOpenMobile,
   setIsOpenMobile,
 }: SidebarProps) {
@@ -121,6 +123,35 @@ export function Sidebar({
 
         {/* Language Switcher & Footer */}
         <div className="p-4 border-t border-[#314838] space-y-3 bg-[#1c2b21]/70">
+          {/* User profile & Sign Out */}
+          {userEmail && (
+            <div className="flex items-center justify-between text-xs text-[#9cb1a2] pb-1">
+              <div className="truncate pr-2">
+                <span className="text-[10px] uppercase font-bold text-[#78897d] block">
+                  {isAccountant ? "Accountant" : "Logged in"}
+                </span>
+                <span className="text-white font-medium text-xs truncate block">{userEmail}</span>
+              </div>
+              <button
+                onClick={async () => {
+                  try {
+                    await fetch("/api/auth/logout", { method: "POST" });
+                    const { createClient } = await import("@/lib/supabaseClient");
+                    const supabase = createClient();
+                    await supabase.auth.signOut();
+                  } catch (e) {
+                    console.error(e);
+                  }
+                  window.location.href = "/login";
+                }}
+                className="p-1.5 rounded-lg text-[#9cb1a2] hover:text-white hover:bg-[#2d4233] transition-colors shrink-0"
+                title="Sign Out"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
           {/* EN / PT-BR Toggle Button */}
           <div className="flex items-center justify-between text-xs text-[#9cb1a2] bg-[#233529] p-1.5 rounded-xl border border-[#314838]">
             <div className="flex items-center gap-1.5 px-2 font-medium">

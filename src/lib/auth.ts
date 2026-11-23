@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { db } from "@/db";
-import { organizations, organizationMembers, companySettings, categories, categoryRules } from "@/db/schema";
+import { organizations, organizationMembers, organizationInvites, companySettings, categories, categoryRules } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 
 export type UserRole = "owner" | "editor" | "accountant";
@@ -129,10 +129,16 @@ export async function seedDefaultOrganizationData(orgId: string) {
  * Ensures a default development organization exists and returns auth context
  */
 async function getDevAuthContext(): Promise<AuthContext> {
+  const cookieStore = await cookies();
+  const simulatedRole = cookieStore.get("csagil_active_role")?.value as UserRole | undefined;
+
   const devOrgId = DEFAULT_DEV_ORG_ID;
   const devUserId = DEFAULT_DEV_USER_ID;
   const devEmail = process.env.DEV_USER_EMAIL || "dev@csagil.local";
-  const devRole = (process.env.DEV_USER_ROLE as UserRole) || "owner";
+  const defaultRole = (process.env.DEV_USER_ROLE as UserRole) || "owner";
+  const devRole = (simulatedRole && ["owner", "editor", "accountant"].includes(simulatedRole))
+    ? simulatedRole
+    : defaultRole;
 
   // Ensure dev organization exists
   const existingOrg = await db.query.organizations.findFirst({
@@ -152,7 +158,7 @@ async function getDevAuthContext(): Promise<AuthContext> {
       organizationId: devOrgId,
       userId: devUserId,
       email: devEmail,
-      role: devRole,
+      role: "owner",
     }).onConflictDoNothing();
 
     await seedDefaultOrganizationData(devOrgId);
@@ -224,46 +230,72 @@ export async function getAuthContext(): Promise<AuthContext | null> {
       return await getDevAuthContext();
     }
 
-  // Check organization membership
-  const member = await db.query.organizationMembers.findFirst({
-    where: eq(organizationMembers.userId, user.id),
-  });
-
-  if (!member) {
-    // If user has no organization yet, create their default one
-    const newOrgId = `org-${user.id.slice(0, 12)}`;
-    await db.insert(organizations).values({
-      id: newOrgId,
-      name: user.user_metadata?.company_name || user.email?.split("@")[0] || "My Company",
-      slug: `org-${Date.now()}`,
-      currency: "BRL",
-      locale: "pt-BR",
+    // Check organization membership
+    let member = await db.query.organizationMembers.findFirst({
+      where: eq(organizationMembers.userId, user.id),
     });
 
-    await db.insert(organizationMembers).values({
-      organizationId: newOrgId,
-      userId: user.id,
-      email: user.email || "",
-      role: "owner",
-    });
+    if (!member && user.email) {
+      const invite = await db.query.organizationInvites.findFirst({
+        where: eq(organizationInvites.email, user.email),
+      });
 
-    await seedDefaultOrganizationData(newOrgId);
+      if (invite) {
+        await db.insert(organizationMembers).values({
+          organizationId: invite.organizationId,
+          userId: user.id,
+          email: user.email,
+          role: invite.role,
+        }).onConflictDoNothing();
 
-    return {
-      userId: user.id,
-      email: user.email || "",
-      organizationId: newOrgId,
-      role: "owner",
-      isAccountant: false,
-    };
-  }
+        await db.update(organizationInvites).set({ acceptedAt: new Date() }).where(eq(organizationInvites.id, invite.id));
+
+        member = await db.query.organizationMembers.findFirst({
+          where: eq(organizationMembers.userId, user.id),
+        });
+      }
+    }
+
+    if (!member) {
+      // If user has no organization or invite, create their default one
+      const newOrgId = `org-${user.id.slice(0, 12)}`;
+      await db.insert(organizations).values({
+        id: newOrgId,
+        name: user.user_metadata?.company_name || user.email?.split("@")[0] || "My Company",
+        slug: `org-${Date.now()}`,
+        currency: "BRL",
+        locale: "pt-BR",
+      }).onConflictDoNothing();
+
+      await db.insert(organizationMembers).values({
+        organizationId: newOrgId,
+        userId: user.id,
+        email: user.email || "",
+        role: "owner",
+      }).onConflictDoNothing();
+
+      await seedDefaultOrganizationData(newOrgId);
+
+      member = {
+        organizationId: newOrgId,
+        userId: user.id,
+        email: user.email || "",
+        role: "owner" as UserRole,
+        createdAt: new Date(),
+      };
+    }
+
+    const simulatedRole = cookieStore.get("csagil_active_role")?.value as UserRole | undefined;
+    const effectiveRole = (member.role === "owner" && simulatedRole && ["owner", "editor", "accountant"].includes(simulatedRole))
+      ? simulatedRole
+      : member.role;
 
     return {
       userId: user.id,
       email: user.email || member.email,
       organizationId: member.organizationId,
-      role: member.role,
-      isAccountant: member.role === "accountant",
+      role: effectiveRole,
+      isAccountant: effectiveRole === "accountant",
     };
   } catch (err) {
     console.warn("Supabase auth resolution failed, falling back to dev context:", err);

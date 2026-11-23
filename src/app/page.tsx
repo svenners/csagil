@@ -48,6 +48,7 @@ export default function Home() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         isAccountant={isAccountant}
+        userEmail={userEmail}
         isOpenMobile={isOpenMobile}
         setIsOpenMobile={setIsOpenMobile}
       />
