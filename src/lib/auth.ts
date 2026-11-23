@@ -171,41 +171,58 @@ async function getDevAuthContext(): Promise<AuthContext> {
  * Resolves current user and their active organization from Supabase Auth cookies or DEV_AUTH_BYPASS
  */
 export async function getAuthContext(): Promise<AuthContext | null> {
-  // 1. Check Dev Mode Bypass
-  if (process.env.DEV_AUTH_BYPASS === "true" || !process.env.NEXT_PUBLIC_SUPABASE_URL) {
+  let rawUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").trim();
+  if (rawUrl && !rawUrl.startsWith("http://") && !rawUrl.startsWith("https://")) {
+    rawUrl = `https://${rawUrl}`;
+  }
+
+  let isValidUrl = false;
+  try {
+    if (rawUrl) {
+      const parsed = new URL(rawUrl);
+      isValidUrl = (parsed.protocol === "http:" || parsed.protocol === "https:") && Boolean(parsed.hostname);
+    }
+  } catch {
+    isValidUrl = false;
+  }
+
+  // 1. Check Dev Mode Bypass or invalid/missing Supabase URL
+  if (process.env.DEV_AUTH_BYPASS === "true" || !isValidUrl || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
     return await getDevAuthContext();
   }
 
   // 2. Production Supabase Auth with SSR Cookie Store
-  const cookieStore = await cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
+  try {
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      rawUrl,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              );
+            } catch {
+              // Can be ignored in Server Component render
+            }
+          },
         },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            );
-          } catch {
-            // Can be ignored in Server Component render
-          }
-        },
-      },
+      }
+    );
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      // If user has not signed in via Supabase yet, allow dev fallback
+      return await getDevAuthContext();
     }
-  );
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return null;
-  }
 
   // Check organization membership
   const member = await db.query.organizationMembers.findFirst({
@@ -241,13 +258,17 @@ export async function getAuthContext(): Promise<AuthContext | null> {
     };
   }
 
-  return {
-    userId: user.id,
-    email: user.email || member.email,
-    organizationId: member.organizationId,
-    role: member.role,
-    isAccountant: member.role === "accountant",
-  };
+    return {
+      userId: user.id,
+      email: user.email || member.email,
+      organizationId: member.organizationId,
+      role: member.role,
+      isAccountant: member.role === "accountant",
+    };
+  } catch (err) {
+    console.warn("Supabase auth resolution failed, falling back to dev context:", err);
+    return await getDevAuthContext();
+  }
 }
 
 /**

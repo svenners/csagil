@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, connection } from "next/server";
 import { getAuthContext, assertCanMutate } from "@/lib/auth";
 import { db } from "@/db";
 import {
@@ -16,6 +16,7 @@ import {
 import { eq } from "drizzle-orm";
 
 export async function POST(req: NextRequest) {
+  await connection();
   try {
     const auth = await getAuthContext();
     if (!auth) {
