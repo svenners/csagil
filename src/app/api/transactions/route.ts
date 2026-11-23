@@ -1,13 +1,12 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, connection } from "next/server";
 import { getAuthContext, assertCanMutate } from "@/lib/auth";
 import { db } from "@/db";
 import { transactions, categories, categoryRules, periodLocks, auditLogs } from "@/db/schema";
 import { eq, and, desc, gte, lte, ilike, or, sql } from "drizzle-orm";
 import { findMatchingCategoryRule } from "@/lib/categoryRulesEngine";
 
-export const dynamic = "force-dynamic";
-
 export async function GET(req: NextRequest) {
+  await connection();
   try {
     const auth = await getAuthContext();
     if (!auth) {

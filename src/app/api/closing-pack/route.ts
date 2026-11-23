@@ -1,13 +1,12 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, connection } from "next/server";
 import { getAuthContext } from "@/lib/auth";
 import { db } from "@/db";
 import { transactions, invoices, categories, companySettings } from "@/db/schema";
 import { eq, and, gte, lte } from "drizzle-orm";
 import * as XLSX from "xlsx";
 
-export const dynamic = "force-dynamic";
-
 export async function GET(req: NextRequest) {
+  await connection();
   try {
     const auth = await getAuthContext();
     if (!auth) {
