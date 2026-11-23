@@ -5,6 +5,8 @@ import { transactions, categories, categoryRules, periodLocks, auditLogs } from 
 import { eq, and, desc, gte, lte, ilike, or, sql } from "drizzle-orm";
 import { findMatchingCategoryRule } from "@/lib/categoryRulesEngine";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   try {
     const auth = await getAuthContext();

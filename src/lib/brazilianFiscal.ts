@@ -344,6 +344,7 @@ export async function generatePixQrCodeDataUrl(pixPayload: string): Promise<stri
 
 // Comprehensive Brazilian Fiscal Tax Calculator
 export interface InvoiceItemTaxInput {
+  description?: string;
   type: "service" | "product";
   unitPriceCents: number;
   quantity: number;

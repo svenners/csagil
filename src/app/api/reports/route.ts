@@ -4,6 +4,8 @@ import { db } from "@/db";
 import { transactions, invoices, categories } from "@/db/schema";
 import { eq, and, gte, lte, sql, desc } from "drizzle-orm";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   try {
     const auth = await getAuthContext();
