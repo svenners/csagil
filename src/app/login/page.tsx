@@ -118,10 +118,11 @@ export default function LoginPage() {
       }
 
       const supabase = createClient();
+      const redirectUrl = typeof window !== "undefined" ? `${window.location.origin}/api/auth/callback` : undefined;
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: typeof window !== "undefined" ? window.location.origin : undefined,
+          emailRedirectTo: redirectUrl,
         },
       });
 
