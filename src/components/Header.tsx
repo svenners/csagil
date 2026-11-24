@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Search, Menu, HardDrive, ShieldCheck, Globe, Bell } from "lucide-react";
+import { Search, Menu, HardDrive, ShieldCheck, Globe, Bell, Building2 } from "lucide-react";
 import { useLanguage } from "@/lib/LanguageContext";
 import { NavTab } from "./Sidebar";
 
@@ -12,6 +12,9 @@ interface HeaderProps {
   setSearchQuery: (q: string) => void;
   onSearchSubmit: (q: string) => void;
   isAccountant?: boolean;
+  organizationName?: string;
+  currentOrganizationId?: string;
+  availableWorkspaces?: Array<{ id: string; name: string; role: string }>;
 }
 
 export function Header({
@@ -21,6 +24,9 @@ export function Header({
   setSearchQuery,
   onSearchSubmit,
   isAccountant = false,
+  organizationName,
+  currentOrganizationId,
+  availableWorkspaces = [],
 }: HeaderProps) {
   const { t, locale, setLocale } = useLanguage();
 
@@ -72,6 +78,37 @@ export function Header({
 
       {/* Right: Status Indicators & Quick Language Switcher */}
       <div className="flex items-center gap-2 md:gap-3 shrink-0">
+        {/* Workspace / Company Switcher */}
+        {availableWorkspaces && availableWorkspaces.length > 1 ? (
+          <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#f0f2da] border border-[#9cb19e] rounded-xl text-xs font-bold text-[#11140e] shadow-2xs">
+            <Building2 className="w-3.5 h-3.5 text-[#2f5c40] shrink-0" />
+            <select
+              value={currentOrganizationId}
+              onChange={async (e) => {
+                const orgId = e.target.value;
+                await fetch("/api/organization/switch", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ organizationId: orgId }),
+                });
+                window.location.reload();
+              }}
+              className="bg-transparent text-[#11140e] font-bold text-xs border-none outline-none cursor-pointer pr-1"
+            >
+              {availableWorkspaces.map((ws) => (
+                <option key={ws.id} value={ws.id} className="text-[#11140e] bg-white font-semibold">
+                  {ws.name} ({ws.role === "accountant" ? "Accountant" : ws.role})
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-[#f0f2da] border border-[#bfcbbd] rounded-xl text-xs font-bold text-[#1a1d17] shadow-2xs">
+            <Building2 className="w-3.5 h-3.5 text-[#2f5c40] shrink-0" />
+            <span className="truncate max-w-[140px]">{organizationName || "CS Agil Finance"}</span>
+          </div>
+        )}
+
         {/* Accountant Read-Only Badge */}
         {isAccountant ? (
           <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-300 rounded-xl text-xs font-bold text-emerald-800 shadow-2xs">

@@ -17,6 +17,9 @@ export default function Home() {
   const [isOpenMobile, setIsOpenMobile] = useState(false);
   const [isAccountant, setIsAccountant] = useState(false);
   const [userEmail, setUserEmail] = useState("");
+  const [organizationId, setOrganizationId] = useState("");
+  const [organizationName, setOrganizationName] = useState("CS Agil Finance");
+  const [availableWorkspaces, setAvailableWorkspaces] = useState<Array<{ id: string; name: string; role: string }>>([]);
 
   useEffect(() => {
     async function checkAuth() {
@@ -27,6 +30,9 @@ export default function Home() {
           if (data.authenticated) {
             setIsAccountant(data.isAccountant);
             setUserEmail(data.email);
+            setOrganizationId(data.organizationId || "");
+            setOrganizationName(data.organizationName || "CS Agil Finance");
+            setAvailableWorkspaces(data.availableWorkspaces || []);
           }
         }
       } catch (err) {
@@ -63,6 +69,9 @@ export default function Home() {
           setSearchQuery={setSearchQuery}
           onSearchSubmit={handleSearchSubmit}
           isAccountant={isAccountant}
+          organizationName={organizationName}
+          currentOrganizationId={organizationId}
+          availableWorkspaces={availableWorkspaces}
         />
 
         {/* Dynamic Tab Content Area */}

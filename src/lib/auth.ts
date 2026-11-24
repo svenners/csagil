@@ -2,16 +2,24 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { db } from "@/db";
 import { organizations, organizationMembers, organizationInvites, companySettings, categories, categoryRules } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 
 export type UserRole = "owner" | "editor" | "accountant";
+
+export interface WorkspaceSummary {
+  id: string;
+  name: string;
+  role: UserRole;
+}
 
 export interface AuthContext {
   userId: string;
   email: string;
   organizationId: string;
+  organizationName: string;
   role: UserRole;
   isAccountant: boolean; // Convenience flag: if true, all state mutations are blocked
+  availableWorkspaces: WorkspaceSummary[];
 }
 
 const DEFAULT_DEV_ORG_ID = "org-default-csagil";
@@ -168,8 +176,12 @@ async function getDevAuthContext(): Promise<AuthContext> {
     userId: devUserId,
     email: devEmail,
     organizationId: devOrgId,
+    organizationName: existingOrg?.name || "Charlton Shaw Agil Finance",
     role: devRole,
     isAccountant: devRole === "accountant",
+    availableWorkspaces: [
+      { id: devOrgId, name: existingOrg?.name || "Charlton Shaw Agil Finance", role: devRole },
+    ],
   };
 }
 
@@ -230,33 +242,35 @@ export async function getAuthContext(): Promise<AuthContext | null> {
       return await getDevAuthContext();
     }
 
-    // Check organization membership
-    let member = await db.query.organizationMembers.findFirst({
+    // Query all organizations where user is a member
+    let allMemberships = await db.query.organizationMembers.findMany({
       where: eq(organizationMembers.userId, user.id),
     });
 
-    if (!member && user.email) {
-      const invite = await db.query.organizationInvites.findFirst({
+    if (user.email) {
+      const invites = await db.query.organizationInvites.findMany({
         where: eq(organizationInvites.email, user.email),
       });
 
-      if (invite) {
-        await db.insert(organizationMembers).values({
-          organizationId: invite.organizationId,
-          userId: user.id,
-          email: user.email,
-          role: invite.role,
-        }).onConflictDoNothing();
+      for (const invite of invites) {
+        if (!allMemberships.some((m) => m.organizationId === invite.organizationId)) {
+          await db.insert(organizationMembers).values({
+            organizationId: invite.organizationId,
+            userId: user.id,
+            email: user.email,
+            role: invite.role,
+          }).onConflictDoNothing();
 
-        await db.update(organizationInvites).set({ acceptedAt: new Date() }).where(eq(organizationInvites.id, invite.id));
-
-        member = await db.query.organizationMembers.findFirst({
-          where: eq(organizationMembers.userId, user.id),
-        });
+          await db.update(organizationInvites).set({ acceptedAt: new Date() }).where(eq(organizationInvites.id, invite.id));
+        }
       }
+
+      allMemberships = await db.query.organizationMembers.findMany({
+        where: eq(organizationMembers.userId, user.id),
+      });
     }
 
-    if (!member) {
+    if (allMemberships.length === 0) {
       // If user has no organization or invite, create their default one
       const newOrgId = `org-${user.id.slice(0, 12)}`;
       await db.insert(organizations).values({
@@ -276,26 +290,48 @@ export async function getAuthContext(): Promise<AuthContext | null> {
 
       await seedDefaultOrganizationData(newOrgId);
 
-      member = {
-        organizationId: newOrgId,
-        userId: user.id,
-        email: user.email || "",
-        role: "owner" as UserRole,
-        createdAt: new Date(),
-      };
+      allMemberships = await db.query.organizationMembers.findMany({
+        where: eq(organizationMembers.userId, user.id),
+      });
     }
 
+    // Determine active organization: check cookie csagil_active_org_id or default to first
+    const activeOrgCookie = cookieStore.get("csagil_active_org_id")?.value;
+    const activeMember = (activeOrgCookie && allMemberships.find((m) => m.organizationId === activeOrgCookie))
+      || allMemberships[0];
+
+    // Fetch org details for all memberships
+    const allOrgIds = allMemberships.map((m) => m.organizationId);
+    const orgsList = allOrgIds.length > 0
+      ? await db.query.organizations.findMany({
+          where: inArray(organizations.id, allOrgIds),
+        })
+      : [];
+
+    const availableWorkspaces: WorkspaceSummary[] = allMemberships.map((m) => {
+      const org = orgsList.find((o) => o.id === m.organizationId);
+      return {
+        id: m.organizationId,
+        name: org?.name || "Workspace",
+        role: m.role,
+      };
+    });
+
+    const activeOrg = orgsList.find((o) => o.id === activeMember.organizationId);
+
     const simulatedRole = cookieStore.get("csagil_active_role")?.value as UserRole | undefined;
-    const effectiveRole = (member.role === "owner" && simulatedRole && ["owner", "editor", "accountant"].includes(simulatedRole))
+    const effectiveRole = (activeMember.role === "owner" && simulatedRole && ["owner", "editor", "accountant"].includes(simulatedRole))
       ? simulatedRole
-      : member.role;
+      : activeMember.role;
 
     return {
       userId: user.id,
-      email: user.email || member.email,
-      organizationId: member.organizationId,
+      email: user.email || activeMember.email,
+      organizationId: activeMember.organizationId,
+      organizationName: activeOrg?.name || "My Company",
       role: effectiveRole,
       isAccountant: effectiveRole === "accountant",
+      availableWorkspaces,
     };
   } catch (err) {
     console.warn("Supabase auth resolution failed, falling back to dev context:", err);

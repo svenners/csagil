@@ -13,8 +13,10 @@ export async function GET() {
       userId: auth.userId,
       email: auth.email,
       organizationId: auth.organizationId,
+      organizationName: auth.organizationName || "CS Agil Finance",
       role: auth.role,
       isAccountant: auth.isAccountant,
+      availableWorkspaces: auth.availableWorkspaces || [],
     });
   } catch (error: any) {
     console.error("Auth me error:", error);
