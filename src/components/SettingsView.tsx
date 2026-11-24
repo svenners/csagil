@@ -54,6 +54,7 @@ export function SettingsView({ isAccountant = false }: SettingsViewProps) {
 
   // Invite form state
   const [inviteEmail, setInviteEmail] = useState("");
+  const [invitePassword, setInvitePassword] = useState("");
   const [inviteRole, setInviteRole] = useState<"editor" | "accountant">("accountant");
   const [inviting, setInviting] = useState(false);
   const [inviteSuccessMsg, setInviteSuccessMsg] = useState<string | null>(null);
@@ -94,13 +95,18 @@ export function SettingsView({ isAccountant = false }: SettingsViewProps) {
       const res = await fetch("/api/organization/members", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: inviteEmail, role: inviteRole }),
+        body: JSON.stringify({
+          email: inviteEmail,
+          role: inviteRole,
+          password: invitePassword || undefined,
+        }),
       });
 
       if (res.ok) {
         const json = await res.json();
         setInviteSuccessMsg(json.message);
         setInviteEmail("");
+        setInvitePassword("");
         fetchMembers();
       } else {
         const err = await res.json();
@@ -281,7 +287,7 @@ export function SettingsView({ isAccountant = false }: SettingsViewProps) {
             </h4>
 
             <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 text-xs">
-              <div className="sm:col-span-6">
+              <div className="sm:col-span-4">
                 <input
                   type="email"
                   placeholder={t.settings.emailPlaceholder}
@@ -292,7 +298,17 @@ export function SettingsView({ isAccountant = false }: SettingsViewProps) {
                 />
               </div>
 
-              <div className="sm:col-span-4">
+              <div className="sm:col-span-3">
+                <input
+                  type="password"
+                  placeholder="Initial Password (min 6 chars)"
+                  value={invitePassword}
+                  onChange={(e) => setInvitePassword(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-[#9cb19e] bg-white text-[#11140e] font-semibold text-xs shadow-2xs focus:border-[#2f5c40] focus:outline-none"
+                />
+              </div>
+
+              <div className="sm:col-span-3">
                 <select
                   value={inviteRole}
                   onChange={(e) => setInviteRole(e.target.value as any)}
@@ -317,6 +333,10 @@ export function SettingsView({ isAccountant = false }: SettingsViewProps) {
                 </button>
               </div>
             </div>
+
+            <p className="text-[11px] text-[#78897d]">
+              Tip: Provide an initial password so the user or accountant can log in directly at <code>/login</code> without needing email links.
+            </p>
 
             {inviteSuccessMsg && (
               <div className="p-2.5 bg-emerald-50 border border-emerald-300 rounded-xl text-xs font-semibold text-emerald-900 flex items-center gap-2">

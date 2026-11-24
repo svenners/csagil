@@ -83,15 +83,28 @@ export default function LoginPage() {
       });
 
       if (error) {
-        setMessage({ text: error.message, type: "error" });
+        if (error.message.toLowerCase().includes("rate limit")) {
+          setMessage({
+            text: "Email rate limit reached. In Supabase Dashboard > Authentication > Providers > Email, turn 'Confirm email' OFF for instant sign-ups, or ask your admin to set your initial password in Settings.",
+            type: "error",
+          });
+        } else {
+          setMessage({ text: error.message, type: "error" });
+        }
       } else if (data?.user?.identities?.length === 0) {
         setMessage({
-          text: "An account with this email already exists. Please sign in instead.",
+          text: "An account with this email already exists. Please sign in with your password.",
           type: "error",
         });
+      } else if (data?.session) {
+        setMessage({ text: "Account registered and logged in! Redirecting...", type: "success" });
+        setTimeout(() => {
+          router.push("/");
+          router.refresh();
+        }, 800);
       } else {
         setMessage({
-          text: "Account registered! If confirmation is required, please check your inbox.",
+          text: "Account registered! If email confirmation is enabled in Supabase, check your inbox. Otherwise, switch to Sign In.",
           type: "success",
         });
         setMode("signin");
